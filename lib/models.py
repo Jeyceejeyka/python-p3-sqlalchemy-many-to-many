@@ -1,41 +1,46 @@
-from sqlalchemy import create_engine, func
-from sqlalchemy import ForeignKey, Table, Column, Integer, String, DateTime, MetaData
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, func
+from sqlalchemy.orm import relationship, declarative_base
 
-convention = {
-    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-}
-metadata = MetaData(naming_convention=convention)
-
-Base = declarative_base(metadata=metadata)
+Base = declarative_base()
 
 class Game(Base):
-    __tablename__ = 'games'
+    __tablename__ = 'game'  # ✅ Make sure this name matches your expected table name
 
-    id = Column(Integer(), primary_key=True)
-    title = Column(String())
-    genre = Column(String())
-    platform = Column(String())
-    price = Column(Integer())
+    id = Column(Integer, primary_key=True)
+    title = Column(String, nullable=False)
+    genre = Column(String)
+    platform = Column(String)
+    price = Column(Float)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    reviews = relationship('Review', backref=backref('game'))
+    reviews = relationship("Review", back_populates="game")
+    users = relationship("User", secondary="reviews", back_populates="games")
 
-    def __repr__(self):
-        return f'Game(id={self.id}, ' + \
-            f'title={self.title}, ' + \
-            f'platform={self.platform})'
+
+class User(Base):
+    __tablename__ = 'user'  # ✅ Make sure this name matches
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    reviews = relationship("Review", back_populates="user")
+    games = relationship("Game", secondary="reviews", back_populates="users")
+
 
 class Review(Base):
-    __tablename__ = 'reviews'
+    __tablename__ = 'review'  # ✅ Make sure this name matches
 
-    id = Column(Integer(), primary_key=True)
-    score = Column(Integer())
-    comment = Column(String())
-    
-    game_id = Column(Integer(), ForeignKey('games.id'))
+    id = Column(Integer, primary_key=True)
+    score = Column(Integer, nullable=False)
+    comment = Column(String)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    def __repr__(self):
-        return f'Review(id={self.id}, ' + \
-            f'score={self.score}, ' + \
-            f'game_id={self.game_id})'
+    game_id = Column(Integer, ForeignKey('games.id'))  # ✅ Ensure FK references correctly
+    user_id = Column(Integer, ForeignKey('users.id'))  # ✅ Ensure FK references correctly
+
+    game = relationship("Game", back_populates="reviews")
+    user = relationship("User", back_populates="reviews")
